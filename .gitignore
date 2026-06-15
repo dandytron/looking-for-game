@@ -1,0 +1,20 @@
+# Local Claude config — never commit (workspace convention: exclude before going public)
+.claude/
+
+# Go
+/bin/
+/tmp/
+*.exe
+*.test
+*.out
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

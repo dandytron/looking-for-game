@@ -16,15 +16,12 @@ The persistent, named form of a Comparison — a saved group of Members with an 
 _Avoid_: group, party, lobby, room, session
 
 **Member**:
-A person belonging to a Gaggle. Every Member is a real account record, even before they log in.
-_Avoid_: friend, player, profile (a profile is the Steam-side source; a Member is our record of one)
+A person who has joined a Gaggle by authenticating via Steam OpenID and accepting. All Members are authenticated; there is no unauthenticated Member. Membership is opt-in.
+_Avoid_: friend, player, profile (a profile is the Steam-side source; a Member is our record of one); Public-only Member (superseded — see **Invite**)
 
-**Verified Member**:
-A Member who has authenticated via Steam OpenID, exposing their full Library and Wishlist regardless of Steam profile privacy.
-
-**Public-only Member**:
-A Member added by pasted profile reference who has not authenticated; only their public Steam data is readable. Upgrades to Verified in place on first login.
-_Avoid_: guest, unverified user
+**Invite**:
+A pending request for a Steam account to join a Gaggle, created by an Owner (often off the back of a peek). Shown as a greyed-out placeholder column in the Matrix; contributes no Library or Wishlist data until accepted. Resolves to a Member when the invitee logs in and accepts. States: pending → accepted | declined | expired | revoked.
+_Avoid_: add, request, Public-only Member
 
 **Owner**:
 The Member who created a Gaggle and administers its membership.
@@ -57,16 +54,17 @@ A Steam multiplayer classification used to decide whether an App counts as playa
 ## Relationships
 
 - A **Gaggle** has many **Members**; exactly one is the **Owner**.
-- A **Member** has one **Library** and one **Wishlist**.
+- A **Gaggle** may have pending **Invites**; an **Invite** becomes a **Member** when accepted.
+- A **Member** references one **Library** and one **Wishlist**, keyed by their Steam account and cached independently of Gaggle membership.
 - A **Library** and a **Wishlist** each reference many **Apps**.
 - A **Comparison** produces one **Overlap Matrix**; a **Gaggle** is a persisted **Comparison**.
 - The **Playable Set** is the **Overlap Matrix** filtered to all-Owned rows that pass the active **Play-Together Categories**.
-- A **Member** is either **Verified** or **Public-only**; the distinction governs how much of their Library/Wishlist is readable.
+- Every **Member** is authenticated; a person we hold only public data on is either an account in an **Ad hoc Comparison** or a pending **Invite** — never a Member.
 
 ## Example dialogue
 
-> **Dev:** "If a Gaggle has four Members but one is Public-only with a private profile, what's in the Playable Set?"
-> **Domain expert:** "That Member contributes nothing — we can't read their Library — so the intersection is over the three readable Members. If they log in, they become Verified and their full Library joins the intersection without us re-adding them."
+> **Dev:** "If a Gaggle has three Members and a fourth person is still a pending Invite, what's in the Playable Set?"
+> **Domain expert:** "The Invite contributes nothing — they haven't accepted, so we hold no Library for them — and the intersection is over the three Members. When they accept, any data we cached while peeking attaches to their new Member record and joins the intersection without us re-adding them."
 
 > **Dev:** "Is a free-to-play multiplayer App like Dota in the Playable Set if nobody 'owns' it?"
 > **Domain expert:** "No — the Playable Set is strictly owned-by-all. Free-to-play discovery is handled separately, not folded into the intersection."
@@ -77,3 +75,4 @@ A Steam multiplayer classification used to decide whether an App counts as playa
 - "game" vs "app" — resolved: **App** is the canonical catalog entity (by appid). "Game" is acceptable in UI copy but means the same thing.
 - "friends" — resolved: people in a Gaggle are **Members**, not "friends." (Steam *friends* — the imported friend list — is a separate, Steam-side concept.)
 - "comparison" vs "gaggle" — resolved: a **Comparison** is ephemeral unless saved, at which point it becomes a **Gaggle**. Accounts in an Ad hoc Comparison are not **Members** (Membership is a property of a Gaggle).
+- "Public-only Member" / "Verified Member" — superseded by the opt-in model (see [ADR-0008](./docs/adr/0008-opt-in-membership-invites.md)): every **Member** is authenticated, so the qualifier is redundant. A person we hold only public data on is an **Ad hoc Comparison** account or a pending **Invite**, never a Member. Cached Library/Wishlist data is keyed by Steam account, not by Membership.

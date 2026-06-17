@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LookingForGame — Suggested Build</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232d; --line:#30363d;
+    --ink:#e6edf3; --dim:#9aa7b4; --accent:#58a6ff; --green:#3fb950;
+    --yellow:#d29922; --purple:#bc8cff; --pink:#f778ba; --orange:#db6d28;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{padding:20px 28px 12px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:20px;letter-spacing:.2px}
+  .sub{color:var(--dim);font-size:13px;margin-top:4px}
+  .tabs{display:flex;gap:8px;margin-top:16px}
+  .tab{background:var(--panel);border:1px solid var(--line);color:var(--dim);
+    padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+  .tab.active{color:var(--ink);border-color:var(--accent);background:var(--panel2)}
+  main{display:grid;grid-template-columns:1fr 380px;gap:0;height:calc(100vh - 118px)}
+  .stage{overflow:auto;padding:28px}
+  .detail{border-left:1px solid var(--line);background:var(--panel);
+    padding:24px;overflow:auto}
+  /* roadmap */
+  .flow{display:flex;flex-direction:column;align-items:stretch;max-width:720px;margin:0 auto}
+  .node{position:relative;background:var(--panel);border:1px solid var(--line);
+    border-left:4px solid var(--c,var(--accent));border-radius:10px;padding:14px 16px;
+    cursor:pointer;transition:transform .08s,border-color .12s,background .12s}
+  .node:hover{background:var(--panel2);transform:translateX(2px)}
+  .node.sel{border-color:var(--c,var(--accent));background:var(--panel2);
+    box-shadow:0 0 0 1px var(--c,var(--accent)) inset}
+  .node .ph{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--c,var(--accent));font-weight:700}
+  .node .ti{font-size:16px;font-weight:600;margin:2px 0}
+  .node .go{color:var(--dim);font-size:13px}
+  .arrow{align-self:center;color:var(--line);font-size:20px;line-height:1;margin:6px 0}
+  .tag{display:inline-block;font-size:11px;color:var(--dim);border:1px solid var(--line);
+    border-radius:20px;padding:1px 8px;margin:6px 6px 0 0}
+  /* detail panel */
+  .detail h2{font-size:17px;margin:0 0 2px}
+  .detail .kicker{font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .detail h3{font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
+    margin:20px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+  .detail ul{margin:0;padding-left:18px}
+  .detail li{margin:4px 0}
+  .detail .empty{color:var(--dim);font-style:italic}
+  .adr{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:0 4px 4px 0;display:inline-block}
+  /* architecture */
+  .arch{position:relative;width:880px;height:560px;margin:10px auto}
+  .box{position:absolute;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px;cursor:pointer;width:170px}
+  .box:hover{background:var(--panel2)}
+  .box.sel{box-shadow:0 0 0 2px var(--accent) inset}
+  .box .bt{font-weight:600;font-size:14px}
+  .box .bd{color:var(--dim);font-size:12px;margin-top:2px}
+  .box .badge{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--c);font-weight:700}
+  svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .wire{stroke:var(--line);stroke-width:2;fill:none;marker-end:url(#ah)}
+  .wlab{fill:var(--dim);font-size:11px}
+  .legend{max-width:720px;margin:22px auto 0;color:var(--dim);font-size:12px}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>LookingForGame — Suggested Build</h1>
+  <div class="sub">Tracer-bullet vertical slices: each phase ships something runnable end-to-end before the next adds depth. Click any node for detail.</div>
+  <div class="tabs">
+    <div class="tab active" data-view="road">Build Roadmap</div>
+    <div class="tab" data-view="arch">Runtime Architecture</div>
+    <div class="tab" data-view="sched">Schedule</div>
+  </div>
+</header>
+
+<main>
+  <div class="stage" id="stage"></div>
+  <aside class="detail" id="detail"></aside>
+</main>
+
+<script>
+/* ---------- BUILD ROADMAP DATA ---------- */
+const phases = [
+  { id:"p0", ph:"Phase 0", c:"var(--dim)", title:"Foundation",
+    goal:"Skeleton that boots: nothing useful yet, but the whole shape is wired.",
+    build:[
+      "Repo + <code>docker-compose.yml</code>: Postgres, RabbitMQ, web (Go), worker (Go) — all start, even if empty.",
+      "First schema migration (apps, libraries, wishlists, users, gaggles, gaggle_members).",
+      "Health-check endpoint + a CI job that builds both binaries and runs migrations against a throwaway Postgres."
+    ],
+    exit:"<code>docker compose up</code> brings all four services green; CI passes on push.",
+    adrs:["0003","0004","0005"], tags:["infra","CI"] },
+
+  { id:"p1", ph:"Phase 1", c:"var(--green)", title:"Ad hoc Matrix (the tracer bullet)",
+    goal:"Paste two public SteamIDs → see an Overlap Matrix. The thinnest possible whole product.",
+    build:[
+      "Web: <code>GetOwnedGames</code> for each SteamID via the keyed Web API.",
+      "Store results in the SteamID-keyed cache (libraries table) — no Member, no Gaggle yet.",
+      "Compute the Matrix (Owned / Absent only — categories come later) and return it as one JSON structure.",
+      "Minimal plain-JS page renders the grid. No styling polish."
+    ],
+    exit:"Two real SteamIDs produce a correct owned/absent grid in the browser, served from cache on reload.",
+    adrs:["0006"], tags:["vertical slice","plain-JS"] },
+
+  { id:"p2", ph:"Phase 2", c:"var(--yellow)", title:"Enrichment + Playable Set",
+    goal:"Turn raw ownership into 'what can we play together' — the headline broker story.",
+    build:[
+      "Web publishes an <code>enrich appid</code> message for any App with no cached metadata.",
+      "Worker consumes it, calls the rate-limited <code>appdetails</code> behind a token bucket, writes categories to the apps cache.",
+      "Apply the configurable Play-Together filter (co-op default) to derive the Playable Set.",
+      "UI shows <em>pending</em> for not-yet-enriched rows; they fill in as the worker drains the queue."
+    ],
+    exit:"Cold-start a fresh App set; the queue drains without tripping Steam's limit; Playable Set appears.",
+    adrs:["0002","0005"], tags:["RabbitMQ","worker","cache"] },
+
+  { id:"p3", ph:"Phase 3", c:"var(--purple)", title:"Auth, Gaggles & Invites",
+    goal:"Persist groups with consent. Ad hoc becomes saveable; people opt in.",
+    build:[
+      "Steam OpenID login → Verified Member; session cookie.",
+      "Save a Comparison as a named Gaggle (Owner + members); unguessable URL slug.",
+      "Invite flow: paste/peek generates a pending Invite; becomes a Member only on login + accept.",
+      "Add Wishlists to the Matrix (the Wishlisted cell state).",
+      "Per-SteamID delete path; cached peek-data attaches to a Member on accept (upgrade in place)."
+    ],
+    exit:"Two real people each log in, land in one Gaggle via link, and see each other's libraries + wishlists.",
+    adrs:["0001","0006"], tags:["OpenID","consent","persistence"] },
+
+  { id:"p4", ph:"Phase 4", c:"var(--pink)", title:"Live updates (SSE)",
+    goal:"Everyone watching a Gaggle sees joins and refreshes ripple in, live.",
+    build:[
+      "Browser subscribes to an SSE stream per Gaggle.",
+      "Worker publishes a thin 'gaggle G changed' event to a RabbitMQ fanout exchange.",
+      "Every web instance consumes it, re-reads authoritative state from Postgres, pushes the updated Matrix down SSE.",
+      "Events carry IDs only — state is never shipped through the event."
+    ],
+    exit:"Two browsers on one Gaggle; a Member joins in one and the other updates without reload.",
+    adrs:["0007"], tags:["SSE","fanout"] },
+
+  { id:"p5", ph:"Phase 5", c:"var(--orange)", title:"Freshness, demo & deploy",
+    goal:"Make it a reliably clickable demo and a tidy artifact.",
+    build:[
+      "Stale-while-revalidate: serve cached instantly, publish a background refresh past the 24h TTL; show 'last synced' + manual Refresh.",
+      "Seed a public demo Gaggle behind a 'Try a sample' button.",
+      "Deploy all four services to a small VPS via Compose (<code>restart: unless-stopped</code>, nightly <code>pg_dump</code>).",
+      "README self-hosting section (VPS / Fly / Render + $0 free-tier split)."
+    ],
+    exit:"A cold visitor clicks the demo link and sees a populated Matrix in one click.",
+    adrs:["0001","0007"], tags:["deploy","demo","TTL"] },
+];
+
+/* ---------- SCHEDULE DATA ---------- */
+const weeks = [
+  { id:"w0", wk:"Week 0", dates:"now · ~2h", c:"var(--dim)", title:"Before you write code",
+    focus:"Clear the blockers so build weeks aren't setup weeks.",
+    tasks:[
+      "Register a Steam Web API key (free).",
+      "Grab two test SteamID64s with public libraries.",
+      "Spike the wishlist endpoint: <code>IWishlistService</code> vs the legacy store endpoint — pick one.",
+      "Provision the VPS (or decide Fly / Render)."
+    ],
+    milestone:"All four blockers cleared.",
+    risk:"The wishlist endpoint is still an open design question — resolve it here; it gates the wishlist column in Week 4." },
+
+  { id:"w1", wk:"Week 1", dates:"Jun 15–21", c:"var(--green)", title:"Foundation + first Steam call",
+    focus:"Skeleton that boots; one real library fetched.",
+    tasks:[
+      "Two Go binaries (web, worker) + shared packages.",
+      "<code>docker-compose</code>: Postgres + RabbitMQ + web + worker all boot.",
+      "First migration (apps, libraries, wishlists, users, gaggles, gaggle_members, invites).",
+      "CI: build both binaries, run migrations on throwaway Postgres.",
+      "Steam client: <code>GetOwnedGames</code> for one SteamID."
+    ],
+    milestone:"<code>docker compose up</code> all green; CI passes; a real library prints to stdout.",
+    risk:"Go + Docker + migrations setup can eat the week. If so, push the Steam client to Week 2." },
+
+  { id:"w2", wk:"Week 2", dates:"Jun 22–28", c:"var(--green)", title:"Ad hoc Matrix, end to end",
+    focus:"The tracer bullet — thinnest possible whole product.",
+    tasks:[
+      "Fetch two libraries → SteamID-keyed cache (no Member/Gaggle).",
+      "Compute the Matrix (Owned / Absent only) → one JSON structure.",
+      "Minimal plain-JS page renders the grid."
+    ],
+    milestone:"Two SteamIDs produce a correct owned/absent grid, served from cache on reload.",
+    risk:"Morale checkpoint — protect this above everything. If behind, cut scope, not this week." },
+
+  { id:"w3", wk:"Week 3", dates:"Jun 29–Jul 5", c:"var(--yellow)", title:"Enrichment + Playable Set",
+    focus:"The headline broker story.",
+    tasks:[
+      "Web publishes <code>enrich appid</code> for uncached Apps.",
+      "Worker consumes, calls <code>appdetails</code> behind a token bucket, writes categories.",
+      "Play-Together filter (co-op default) → Playable Set.",
+      "UI shows <em>pending</em> rows that fill as the worker drains."
+    ],
+    milestone:"Cold App set drains without tripping Steam's limit; Playable Set appears.",
+    risk:"Highest-risk week: RabbitMQ ack/redelivery + rate-limit tuning. Fallback — prove the flow in-process, swap to RabbitMQ once it works; don't ship without the broker." },
+
+  { id:"w4", wk:"Week 4", dates:"Jul 6–12", c:"var(--purple)", title:"Auth, Gaggles, Invites",
+    focus:"Persist groups with consent.",
+    tasks:[
+      "Steam OpenID login → Member; session cookie.",
+      "Save a Comparison as a named Gaggle (Owner + unguessable slug).",
+      "Invite flow: pending → Member on accept (ADR-0008); pending column greyed out.",
+      "Add Wishlists (the Wishlisted cell state).",
+      "Per-SteamID delete path; cached peek-data attaches on accept."
+    ],
+    milestone:"Two real people log in, land in one Gaggle by link, see each other's libraries + wishlists.",
+    risk:"OpenID round-trip is fiddly. If Invites overrun, ship Owner + self-join by link and defer the state machine." },
+
+  { id:"w5", wk:"Week 5", dates:"Jul 13–17", c:"var(--orange)", title:"Deploy + buffer",
+    focus:"Make it a reliably clickable link.",
+    tasks:[
+      "Deploy four services to the VPS via Compose (<code>restart: unless-stopped</code>, nightly <code>pg_dump</code>).",
+      "Smoke-test the live link cold.",
+      "Buffer days — they will get used.",
+      "If ahead: pull in SSE (P4) or the demo-seed Gaggle."
+    ],
+    milestone:"A cold visitor clicks the live link and sees a Matrix.",
+    risk:"This is your buffer. Stretch items (SSE, SWR, demo seed) only if the deploy is solid." },
+];
+
+/* ---------- ARCHITECTURE DATA ---------- */
+const arch = {
+  boxes:[
+    { id:"browser", x:355, y:8,   t:"Browser", d:"plain-JS now → SPA later", badge:"client", c:"var(--accent)" },
+    { id:"web",     x:355, y:150, t:"Web (Go)", d:"JSON API · holds SSE conns", badge:"process", c:"var(--green)" },
+    { id:"worker",  x:355, y:300, t:"Worker (Go)", d:"enrichment · refresh jobs", badge:"process", c:"var(--yellow)" },
+    { id:"pg",      x:60,  y:225, t:"Postgres", d:"system of record + cache", badge:"datastore", c:"var(--purple)" },
+    { id:"mq",      x:650, y:225, t:"RabbitMQ", d:"work queue + fanout exchange", badge:"broker", c:"var(--pink)" },
+    { id:"steam",   x:650, y:430, t:"Steam APIs", d:"keyed Web API + appdetails", badge:"upstream", c:"var(--orange)" },
+  ],
+  // wires: from box edge to box edge (hand-placed)
+  wires:[
+    { d:"M440,70 L440,150", lab:"HTTP / SSE", lx:448, ly:115 },
+    { d:"M425,230 L210,250", lab:"read/write", lx:250, ly:232 },
+    { d:"M525,235 Q610,250 650,255", lab:"publish enrich", lx:545, ly:225 },
+    { d:"M650,300 Q600,330 525,340", lab:"consume", lx:548, ly:330 },
+    { d:"M440,380 L230,300", lab:"write cache", lx:250, ly:355 },
+    { d:"M735,300 L735,430", lab:"token-bucketed", lx:743, ly:370 },
+    { d:"M650,470 Q500,470 230,300", lab:"GetOwnedGames (web)", lx:330, ly:485 },
+    { d:"M715,225 Q720,180 525,175", lab:"gaggle-changed (fanout)", lx:545, ly:150 },
+  ],
+  detail:{
+    browser:{ goal:"The only client. Renders the Matrix from one JSON structure; subscribes to SSE for live updates.", build:["Plain-JS in v1, swappable for an SPA against the same JSON contract."], adrs:["0003","0006"], tags:["client"] },
+    web:{ goal:"Stateless JSON API. Serves Matrices from cache, publishes enrichment work, and holds the SSE connections.", build:["Never blocks a request on Steam — unknown Apps are published to the broker and shown pending."], adrs:["0003","0005","0007"], tags:["process"] },
+    worker:{ goal:"Owns every conversation with the rate-limited upstream and every write during cache backfill.", build:["Drains the enrich queue behind a token bucket; also runs background library-refresh jobs."], adrs:["0005"], tags:["process"] },
+    pg:{ goal:"Both the system of record (gaggles, members, invites) and the cache (SteamID-keyed libraries/wishlists, global apps).", build:["Concurrent writers (web + worker) are why this is Postgres, not SQLite."], adrs:["0004"], tags:["datastore"] },
+    mq:{ goal:"Does double duty: a durable work queue for enrichment, and a fanout exchange for live change events.", build:["Thin events (IDs only). Durability means pending work survives a worker restart."], adrs:["0005","0007"], tags:["broker"] },
+    steam:{ goal:"The hostile upstream the whole design defends against.", build:["Keyed Web API (generous) for ownership/wishlist; unkeyed appdetails (~200/5min) for categories — the bottleneck."], adrs:["0002"], tags:["upstream"] },
+  }
+};
+
+/* ---------- RENDER ---------- */
+const stage = document.getElementById("stage");
+const detail = document.getElementById("detail");
+let view = "road", selected = "p0";
+
+function detailHTML(o, kicker){
+  const adrs = (o.adrs||[]).map(a=>`<span class="adr">ADR-${a}</span>`).join("") || "<span class='empty'>—</span>";
+  const tags = (o.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("");
+  const build = (o.build||[]).map(b=>`<li>${b}</li>`).join("");
+  return `<div class="kicker">${kicker}</div>
+    <h2>${o.title||o.t}</h2>
+    <div style="color:var(--dim);margin-top:6px">${o.goal}</div>
+    <h3>What you build</h3><ul>${build}</ul>
+    ${o.exit?`<h3>Done when</h3><div>${o.exit}</div>`:""}
+    <h3>Grounded in</h3><div>${adrs}</div>
+    <h3>Themes</h3><div>${tags||"<span class='empty'>—</span>"}</div>`;
+}
+
+function renderRoadmap(){
+  stage.innerHTML = `<div class="flow" id="flow"></div>
+    <div class="legend">Each phase is a <strong>vertical slice</strong> — it touches the browser, the API, the data, and (from Phase 2) the broker, so you always have something runnable to demo. Build top to bottom; don't start a phase until the one above hits its <em>Done when</em>.</div>`;
+  const flow = document.getElementById("flow");
+  phases.forEach((p,i)=>{
+    const el = document.createElement("div");
+    el.className = "node" + (p.id===selected?" sel":"");
+    el.style.setProperty("--c", p.c);
+    el.innerHTML = `<div class="ph">${p.ph}</div><div class="ti">${p.title}</div>
+      <div class="go">${p.goal}</div>`;
+    el.onclick = ()=>{ selected=p.id; renderRoadmap(); };
+    flow.appendChild(el);
+    if(i<phases.length-1){ const a=document.createElement("div"); a.className="arrow"; a.textContent="▼"; flow.appendChild(a); }
+  });
+  const p = phases.find(x=>x.id===selected) || phases[0];
+  detail.innerHTML = detailHTML(p, p.ph);
+}
+
+function renderArch(){
+  let boxes = arch.boxes.map(b=>`
+    <div class="box${b.id===selected?' sel':''}" style="left:${b.x}px;top:${b.y}px" data-id="${b.id}">
+      <div class="badge" style="--c:${b.c}">${b.badge}</div>
+      <div class="bt">${b.t}</div><div class="bd">${b.d}</div>
+    </div>`).join("");
+  let wires = arch.wires.map(w=>`<path class="wire" d="${w.d}"/>
+    <text class="wlab" x="${w.lx}" y="${w.ly}">${w.lab}</text>`).join("");
+  stage.innerHTML = `<div class="arch">
+      <svg class="wires"><defs>
+        <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#5b6673"/></marker>
+      </defs>${wires}</svg>${boxes}</div>
+    <div class="legend">The shape that falls out of one fact: <strong>Steam is slow, unkeyed, and rate-limited</strong>. So user requests hit the web tier and the cache only; every slow conversation with Steam is pushed onto the worker through the broker. The broker then doubles as the live-update fanout.</div>`;
+  stage.querySelectorAll(".box").forEach(b=>b.onclick=()=>{ selected=b.dataset.id; renderArch(); });
+  const d = arch.detail[selected] || arch.detail.browser;
+  const box = arch.boxes.find(x=>x.id===selected) || arch.boxes[0];
+  detail.innerHTML = detailHTML({...d, t:box.t}, box.badge.toUpperCase());
+}
+
+function scheduleDetail(w){
+  const tasks = (w.tasks||[]).map(t=>`<li>${t}</li>`).join("");
+  return `<div class="kicker">${w.dates}</div>
+    <h2>${w.title}</h2>
+    <div style="color:var(--dim);margin-top:6px">${w.focus}</div>
+    <h3>Tasks</h3><ul>${tasks}</ul>
+    <h3>Milestone</h3><div>${w.milestone}</div>
+    ${w.risk?`<h3>Watch out</h3><div>${w.risk}</div>`:""}`;
+}
+
+function renderSchedule(){
+  stage.innerHTML = `<div class="flow" id="flow"></div>
+    <div class="legend"><strong>Cut line:</strong> Weeks 0–4 (Phases 0–3) + deploy is the v1 that ships by Jul 17; SSE and polish are stretch.
+    If you fall behind, cut from the bottom up: OG cards → freshness/demo/README → SSE → full Invites → wishlist column.
+    Protect finishing the Week 2 tracer bullet above all else.</div>`;
+  const flow = document.getElementById("flow");
+  weeks.forEach((w,i)=>{
+    const el = document.createElement("div");
+    el.className = "node" + (w.id===selected?" sel":"");
+    el.style.setProperty("--c", w.c);
+    el.innerHTML = `<div class="ph">${w.wk} · ${w.dates}</div><div class="ti">${w.title}</div>
+      <div class="go">${w.focus}</div>`;
+    el.onclick = ()=>{ selected=w.id; renderSchedule(); };
+    flow.appendChild(el);
+    if(i<weeks.length-1){ const a=document.createElement("div"); a.className="arrow"; a.textContent="▼"; flow.appendChild(a); }
+  });
+  const w = weeks.find(x=>x.id===selected) || weeks[0];
+  detail.innerHTML = scheduleDetail(w);
+}
+
+function render(){
+  if(view==="road") renderRoadmap();
+  else if(view==="arch") renderArch();
+  else renderSchedule();
+}
+
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  view=t.dataset.view;
+  selected = view==="road" ? "p0" : view==="arch" ? "browser" : "w0";
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

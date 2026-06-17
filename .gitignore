@@ -13,6 +13,9 @@
 .env.*
 !.env.example
 
+# Spike output — raw Steam API dumps (may carry a SteamID)
+/tests/out/
+
 # OS / editor
 .DS_Store
 *.swp

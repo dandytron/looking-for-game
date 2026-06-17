@@ -17,7 +17,7 @@ See [CONTEXT.md](./CONTEXT.md) for domain vocabulary and [docs/adr/](./docs/adr/
 - **Architecture** — two Go processes (web + worker) decoupled by RabbitMQ; enrichment runs on the worker. See [ADR-0005](./docs/adr/0005-web-worker-split-rabbitmq.md).
 - **Core view** — a single Overlap Matrix; ad hoc (ephemeral) vs Gaggle (persistent) modes; default sort leads with all-owned. See [ADR-0006](./docs/adr/0006-unified-overlap-matrix.md).
 - **Real-time** — live Gaggle updates via SSE, fanned out from the worker through RabbitMQ. See [ADR-0007](./docs/adr/0007-sse-live-updates-broker-fanout.md).
-- **Deployment** — single small VPS running all four services via Docker Compose (see Deployment section); host-portable, alternatives documented in the README.
+- **Deployment** — single small VPS running all four services via Docker Compose, deploys automated with a GitHub Actions pipeline; host-portable, alternatives documented in the README. See [ADR-0010](./docs/adr/0010-deploy-vps-compose-github-actions.md).
 
 ## Steam integration constraints
 
@@ -76,14 +76,15 @@ F2P multiplayer Apps are **not** folded into the Playable Set (which is strictly
 - **Member self-login (v2)** — schema supports many Verified Members; the login UX for non-Owner Members is a later increment.
 - **F2P personalized carve-out** — see above.
 - **OG share cards (stretch)** — generated preview images for shared Gaggle links (member avatars + playable count), stored in S3 and served via CloudFront. The intended, non-contrived use of the file-server/CDN skill; off the critical path.
+- **Deploy hardening (post-v1)** — better-engineering upgrades to the v1 VPS deploy, parked so they don't eat the Jul 17 deadline: infrastructure-as-code for the box (Ansible/Terraform), registry-based zero-downtime deploys, offsite restore-tested backups, real observability (structured logging + metrics + alerting), and secrets management. Pull in only after the demo link is live. See the "Future / better paths" section of [ADR-0010](./docs/adr/0010-deploy-vps-compose-github-actions.md).
 
 ## Deployment
 
-- **Live demo:** a single small VPS (~$5/mo) running all four services — web, worker, Postgres, RabbitMQ — via one `docker-compose.yml`, with `restart: unless-stopped` and a nightly `pg_dump`. Cheapest always-on option for a four-service stack (no per-service charges, no free-tier cold starts), which suits the goal: a reliably clickable demo link.
+- **Live demo:** a single small VPS (~$5/mo) running all four services — web, worker, Postgres, RabbitMQ — via one `docker-compose.yml`, with `restart: unless-stopped` and a nightly `pg_dump`. Deploys are automated with a **GitHub Actions pipeline** (push to `main` → build + ship), TLS via Caddy, uptime watched by a free monitor. Cheapest always-on option for a four-service stack (no per-service charges, no free-tier cold starts), and the path that reuses the most boot.dev coursework (Docker, RabbitMQ/pub-sub, Postgres, Linux, CI/CD). Full reasoning and the rejected alternatives in [ADR-0010](./docs/adr/0010-deploy-vps-compose-github-actions.md).
 - **Why not a free tier:** four always-on services exceed typical free tiers or get slept; a 50s cold start reads as "broken" to a visiting interviewer. The hosting cost is the accepted price of the RabbitMQ/worker architecture chosen for résumé value.
 - **Portability:** the app is just containers + Postgres + RabbitMQ, so the host is swappable. The **README will carry a Self-hosting section** documenting local `docker compose up` plus alternative targets (VPS, Fly.io, Render) and a $0 free-tier split (Neon + CloudAMQP + Fly/Render).
 - **Demo UX:** keep the site public (no password gate); seed a public demo Gaggle behind a "Try a sample" button so a visitor without Steam friends still sees a populated Matrix in one click.
 
 ## Open branches
 
-The architecturally significant decisions are resolved (ADRs 0001–0007 + the decisions above). Remaining work is implementation-level: profile-reference resolution (vanity URL → SteamID64 via `ResolveVanityURL`), choice of wishlist endpoint, schema migrations, testing strategy, and CI.
+The architecturally significant decisions are resolved (ADRs 0001–0007 + the decisions above). The Steam data endpoints are now live-verified — wishlist via `IWishlistService/GetWishlist`, library via keyed `GetOwnedGames`, vanity via `ResolveVanityURL`, metadata via `appdetails` (see [ADR-0009](./docs/adr/0009-steam-data-endpoints-verified.md) and `tests/steam_probe.sh`). Remaining work is implementation-level: schema migrations, testing strategy, and CI.

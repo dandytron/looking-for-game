@@ -1,5 +1,7 @@
 # Steam OpenID auth with staged membership
 
+> Status: **partially superseded by [ADR-0008](./0008-opt-in-membership-invites.md)**. The "Public-only Member added by pasted profile" model is replaced by opt-in membership + Invites. The Steam OpenID auth choice and the upgrade-in-place mechanic below still stand.
+
 We authenticate Members via Steam OpenID 2.0 (free, no Valve relationship beyond a Web API key) rather than a paste-only model, because logging in is the only way to read a Member's *private* Library/Wishlist and to import their Steam friends list — the features that make the product feel effortless.
 
 Every Member is modelled as a real account record from day one, including friends added by pasted profile reference. Such a Member starts **Public-only** (we read only their public Steam data) and upgrades to **Verified** in place on first login — no schema migration, no re-adding.

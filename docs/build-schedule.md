@@ -17,8 +17,8 @@ If you protect one thing, protect **finishing P1 by end of Week 2** — that's t
 
 These are blockers; sort them before Week 1 needs them.
 
-- [ ] **Steam Web API key** — register one (free). Blocks P1.
-- [ ] **Two test Steam accounts** with public libraries (yours + a friend's SteamID64) to develop against.
+- [x] **Steam Web API key** — DONE: in `.env`, verified live this session (ResolveVanityURL agreed, GetOwnedGames returned data).
+- [x] **Two test Steam accounts** with public libraries — DONE: `dandytron` (SID 76561198000323336, 908 owned / 736 wishlist) + SID 76561199125468212 (54 owned / 4 wishlist — small, hand-verifiable). Both read clean via the dev key. _Note: friends-only profiles read empty to the dev key (see DESIGN_DOC "Two-tier privacy"); these two are confirmed public._
 - [x] **Resolve the wishlist-endpoint question** — DONE: `IWishlistService/GetWishlist/v1` (legacy store endpoint is deprecated), live-verified keyless against a real profile via `tests/steam_probe.sh`. See [ADR-0009](./adr/0009-steam-data-endpoints-verified.md).
 - [x] **Decide the host** — DONE: single VPS via Docker Compose, auto-deployed with GitHub Actions ([ADR-0010](./adr/0010-deploy-vps-compose-github-actions.md)). _Still to do: actually provision the box before deploy week._
 

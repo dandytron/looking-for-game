@@ -16,6 +16,9 @@
 # Spike output — raw Steam API dumps (may carry a SteamID)
 /tests/out/
 
+# Local-only build notes (keep out of GitHub; build-plan.html + build-schedule.md stay tracked)
+/docs/local/
+
 # OS / editor
 .DS_Store
 *.swp
